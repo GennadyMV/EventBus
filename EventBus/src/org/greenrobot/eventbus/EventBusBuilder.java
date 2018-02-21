@@ -21,7 +21,11 @@ import org.greenrobot.eventbus.android.AndroidLogger;
 import org.greenrobot.eventbus.meta.SubscriberInfoIndex;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -42,6 +46,7 @@ public class EventBusBuilder {
     boolean strictMethodVerification;
     ExecutorService executorService = DEFAULT_EXECUTOR_SERVICE;
     List<Class<?>> skipMethodVerificationForClasses;
+    Set<Class<?>> skipFindSubscriberMethodsForClasses;
     List<SubscriberInfoIndex> subscriberInfoIndexes;
     Logger logger;
     MainThreadSupport mainThreadSupport;
@@ -139,6 +144,14 @@ public class EventBusBuilder {
             subscriberInfoIndexes = new ArrayList<>();
         }
         subscriberInfoIndexes.add(index);
+        return this;
+    }
+    /** Adds classes which should be skipped from findSubscriberMethods process */
+    public EventBusBuilder skipFindSubscriberMethodsForClasses(Class<?> ... classes) {
+        if(skipFindSubscriberMethodsForClasses == null) {
+            skipFindSubscriberMethodsForClasses = new HashSet<>();
+        }
+        skipFindSubscriberMethodsForClasses.addAll(Arrays.asList(classes));
         return this;
     }
 

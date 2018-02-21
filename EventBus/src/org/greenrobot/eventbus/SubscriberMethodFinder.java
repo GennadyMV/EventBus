@@ -21,9 +21,11 @@ import org.greenrobot.eventbus.meta.SubscriberInfoIndex;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 class SubscriberMethodFinder {
@@ -38,6 +40,7 @@ class SubscriberMethodFinder {
     private static final int MODIFIERS_IGNORE = Modifier.ABSTRACT | Modifier.STATIC | BRIDGE | SYNTHETIC;
     private static final Map<Class<?>, List<SubscriberMethod>> METHOD_CACHE = new ConcurrentHashMap<>();
 
+    private Set<Class<?>> skipFindSubscriberMethodsForClasses;
     private List<SubscriberInfoIndex> subscriberInfoIndexes;
     private final boolean strictMethodVerification;
     private final boolean ignoreGeneratedIndex;
@@ -45,9 +48,14 @@ class SubscriberMethodFinder {
     private static final int POOL_SIZE = 4;
     private static final FindState[] FIND_STATE_POOL = new FindState[POOL_SIZE];
 
-    SubscriberMethodFinder(List<SubscriberInfoIndex> subscriberInfoIndexes, boolean strictMethodVerification,
-                           boolean ignoreGeneratedIndex) {
+    SubscriberMethodFinder(List<SubscriberInfoIndex> subscriberInfoIndexes, Set<Class<?>> skipFindSubscriberMethodsForClasses,
+                           boolean strictMethodVerification, boolean ignoreGeneratedIndex) {
         this.subscriberInfoIndexes = subscriberInfoIndexes;
+        if(skipFindSubscriberMethodsForClasses == null) {
+            this.skipFindSubscriberMethodsForClasses = Collections.emptySet();
+        }else {
+            this.skipFindSubscriberMethodsForClasses = skipFindSubscriberMethodsForClasses;
+        }
         this.strictMethodVerification = strictMethodVerification;
         this.ignoreGeneratedIndex = ignoreGeneratedIndex;
     }
@@ -87,9 +95,16 @@ class SubscriberMethodFinder {
             } else {
                 findUsingReflectionInSingleClass(findState);
             }
-            findState.moveToSuperclass();
+            moveToSuperclass(findState);
         }
         return getMethodsAndRelease(findState);
+    }
+
+    private void moveToSuperclass(FindState findState) {
+        do {
+            findState.moveToSuperclass();
+        }
+        while (findState.clazz != null && skipFindSubscriberMethodsForClasses.contains(findState.clazz));
     }
 
     private List<SubscriberMethod> getMethodsAndRelease(FindState findState) {
@@ -142,7 +157,7 @@ class SubscriberMethodFinder {
         findState.initForSubscriber(subscriberClass);
         while (findState.clazz != null) {
             findUsingReflectionInSingleClass(findState);
-            findState.moveToSuperclass();
+            moveToSuperclass(findState);
         }
         return getMethodsAndRelease(findState);
     }
